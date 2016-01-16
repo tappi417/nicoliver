@@ -33,24 +33,44 @@ def aquire_content(pageurl)
   url = URI.parse(pageurl)
   doc = Nokogiri::HTML(open(url))
 
-  channel_content = ChannelContent.new(pageurl)
-  doc.css('.p-live-body').each do |live|
-    live_content = LiveContent.new
+  channel = Channel.new(pageurl)
+  # チャンネル名取得
+  doc.css('.channel_name').each do |name|
+    channel.channel_title = name.content
+  end
+
+  doc.css('.p-live-body').each do |lives|
+    live = Live.new
+    live.channel_url = pageurl
     # タイトル，リンク取得（ループするが1つのみ取得できる想定)
-    live.css('.g-live-title').each do |title|
-      live_content.title = title.content.gsub(/(\s)+/, '')
+    lives.css('.g-live-title').each do |title|
+      live.live_title = title.content.gsub(/(\s)+/, '')
       title.css('a').each do |anchor|
-        live_content.live_url = anchor['href']
+        live.live_url = anchor['href']
       end
-      channel_content.live_contents << live_content
     end
     # 放送日取得
-    live.css('.g-live-airtime').each do |date|
-      live_content.broadcast_date = format_date(date.content)
+    lives.css('.g-live-airtime').each do |date|
+      live.broadcast_date = format_date(date.content)
     end
+    channel.lives << live
   end
-  return channel_content
+  return channel
 end
+
+# main
+if (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-a")
+  channel = aquire_content(ARGV[1])
+  excecutor = SQLExcecutor.new()
+  excecutor.insert_channel(channel)
+  exit
+elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-d")
+  channel = Channel.new(ARGV[1])
+  excecutor = SQLExcecutor.new()
+  excecutor.delete_channel(channel)
+  exit
+end
+
 
 # 各チャンネルページのデータを取得
 urls = Array['http://ch.nicovideo.jp/amiami-ch',
@@ -60,11 +80,11 @@ urls = Array['http://ch.nicovideo.jp/amiami-ch',
              'http://ch.nicovideo.jp/lulucan-himitsu']
 
 urls.each do |url|
-  channel_content = aquire_content(url)
-  channel_content.live_contents.each do |live|
+  channel = aquire_content(url)
+  channel.lives.each do |live|
     # 放送日を迎えていない生放送のみ表示
     if (live.broadcast_date > DateTime.now)
-      puts live.title + ": " + live.live_url + "(" + live.broadcast_date.strftime("%Y/%m/%d %a.") + ")"
+      puts live.live_title + ": " + live.live_url + "(" + live.broadcast_date.strftime("%Y/%m/%d %a.") + ")"
     end
   end
 end
