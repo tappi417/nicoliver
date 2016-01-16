@@ -8,14 +8,23 @@ class SQLExcecutor
     @db = SQLite3::Database.new("data.db")
   end
 
-  #insert
+  # insert
   def insert_channel(channel)
     @db.execute("insert into channel values(?, ?)",  channel.channel_url, channel.channel_title)
   end
 
-  #delete
+  # delete
   def delete_channel(channel)
     @db.execute("delete from channel where channel_url = ?", channel.channel_url)
+  end
+
+  # select
+  def get_channel_url()
+    result = Array.new
+    @db.execute("select channel_url from channel") do |row|
+      result << row[0]
+    end
+    return result
   end
 
 end

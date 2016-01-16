@@ -59,7 +59,13 @@ def aquire_content(pageurl)
 end
 
 # main
-if (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-a")
+if (ARGV != nil && ARGV.size == 1 && ARGV[0] == "-l")
+  excecutor = SQLExcecutor.new()
+  excecutor.get_channel_url().each do |url|
+    puts url
+  end
+  exit
+elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-a")
   channel = aquire_content(ARGV[1])
   excecutor = SQLExcecutor.new()
   excecutor.insert_channel(channel)
@@ -73,12 +79,8 @@ end
 
 
 # 各チャンネルページのデータを取得
-urls = Array['http://ch.nicovideo.jp/amiami-ch',
-             'http://ch.nicovideo.jp/imas-station',
-             'http://ch.nicovideo.jp/MillionRADIO',
-             'http://ch.nicovideo.jp/cinderellaparty',
-             'http://ch.nicovideo.jp/lulucan-himitsu']
-
+excecutor = SQLExcecutor.new()
+urls = excecutor.get_channel_url()
 urls.each do |url|
   channel = aquire_content(url)
   channel.lives.each do |live|
