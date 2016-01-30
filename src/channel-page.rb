@@ -27,6 +27,16 @@ class SQLExcecutor
     return result
   end
 
+  # insert live
+  def insert_live(live)
+    @db.execute("insert into live values(?, ?, ?, ?)", live.channel_url, live.live_url, live.live_title, live.broadcast_date.to_s)
+  end
+
+  # count live
+  def count_live(live)
+    count =  @db.execute("select count(live_url) from live where channel_url = ? and live_url = ?", live.channel_url, live.live_url)
+    return count[0][0]
+  end
 end
 
 # チャンネルページのデータクラス
@@ -48,8 +58,8 @@ class Live
   attr_accessor :channel_url, :live_url, :live_title, :broadcast_date
   def initialize
     @channel_url = ""
-    @live_title = ""
     @live_url = ""
+    @live_title = ""
     @broadcast_date = "" # Datetimeで扱う
   end
 end

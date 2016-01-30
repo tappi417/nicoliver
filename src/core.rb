@@ -29,7 +29,7 @@ def format_date(raw_date)
 end
 
 # チャンネルページデータを取得
-def aquire_content(pageurl)
+def acquire_content(pageurl)
   url = URI.parse(pageurl)
   doc = Nokogiri::HTML(open(url))
 
@@ -58,21 +58,31 @@ def aquire_content(pageurl)
   return channel
 end
 
+# 生放送情報を取得済みであるかチェックする
+# 取得済みでなければデータベースに登録する
+def check_acquired_live(excecutor, live)
+  if (excecutor.count_live(live) > 0)
+    return true
+  else
+    excecutor.insert_live(live)
+    return false
+  end
+
+end
+
 # main
+excecutor = SQLExcecutor.new()
 if (ARGV != nil && ARGV.size == 1 && ARGV[0] == "-l")
-  excecutor = SQLExcecutor.new()
   excecutor.get_channel_url().each do |url|
     puts url
   end
   exit
 elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-a")
   channel = aquire_content(ARGV[1])
-  excecutor = SQLExcecutor.new()
   excecutor.insert_channel(channel)
   exit
 elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-d")
   channel = Channel.new(ARGV[1])
-  excecutor = SQLExcecutor.new()
   excecutor.delete_channel(channel)
   exit
 end
@@ -82,10 +92,12 @@ end
 excecutor = SQLExcecutor.new()
 urls = excecutor.get_channel_url()
 urls.each do |url|
-  channel = aquire_content(url)
+  channel = acquire_content(url)
   channel.lives.each do |live|
+    # 生放送情報が既に取得済みであるかチェック
+    has_acquired = check_acquired_live(excecutor, live)
     # 放送日を迎えていない生放送のみ表示
-    if (live.broadcast_date > DateTime.now)
+    if (live.broadcast_date > DateTime.now && !has_acquired)
       puts live.live_title + ": " + live.live_url + "(" + live.broadcast_date.strftime("%Y/%m/%d %a.") + ")"
     end
   end
