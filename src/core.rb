@@ -39,21 +39,25 @@ def acquire_content(pageurl)
     channel.channel_title = name.content
   end
 
-  doc.css('.p-live-body').each do |lives|
-    live = Live.new
-    live.channel_url = pageurl
-    # タイトル，リンク取得（ループするが1つのみ取得できる想定)
-    lives.css('.g-live-title').each do |title|
-      live.live_title = title.content.gsub(/(\s)+/, '')
-      title.css('a').each do |anchor|
-        live.live_url = anchor['href']
+  begin
+    doc.css('.p-live-body').each do |lives|
+      live = Live.new
+      live.channel_url = pageurl
+      # タイトル，リンク取得（ループするが1つのみ取得できる想定)
+      lives.css('.g-live-title').each do |title|
+        live.live_title = title.content.gsub(/(\s)+/, '')
+        title.css('a').each do |anchor|
+          live.live_url = anchor['href']
+        end
       end
+      # 放送日取得
+      lives.css('.g-live-airtime').each do |date|
+        live.broadcast_date = format_date(date.content)
+      end
+      channel.lives << live
     end
-    # 放送日取得
-    lives.css('.g-live-airtime').each do |date|
-      live.broadcast_date = format_date(date.content)
-    end
-    channel.lives << live
+  rescue
+    puts "can't get live info:" + channel.channel_title
   end
   return channel
 end
@@ -78,7 +82,7 @@ if (ARGV != nil && ARGV.size == 1 && ARGV[0] == "-l")
   end
   exit
 elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-a")
-  channel = aquire_content(ARGV[1])
+  channel = acquire_content(ARGV[1])
   excecutor.insert_channel(channel)
   exit
 elsif (ARGV != nil && ARGV.size == 2 && ARGV[0] == "-d")
@@ -98,7 +102,9 @@ urls.each do |url|
     has_acquired = check_acquired_live(excecutor, live)
     # 放送日を迎えていない生放送のみ表示
     if (live.broadcast_date > DateTime.now && !has_acquired)
-      puts live.live_title + ": " + live.live_url + "(" + live.broadcast_date.strftime("%Y/%m/%d %a.") + ")"
+      puts live.live_title + ": "
+      puts live.live_url
+      puts "(" + live.broadcast_date.strftime("%Y/%m/%d %a.") + ")"
     end
   end
 end
